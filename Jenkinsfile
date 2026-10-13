@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         APP_NAME = 'hello-python-nti'
-        REPO_URL = 'https://github.com/YOUR_GITHUB_USERNAME/nti-python-jenkins.git'
+        REPO_URL = 'https://github.com/drift3/nti-python-jenkins.git'
         HOST_PORT = '5000'
         CONTAINER_PORT = '5000'
     }
