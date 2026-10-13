@@ -54,6 +54,7 @@ pipeline {
             }
         }
 
+        
         stage('Run Docker Container') {
             steps {
                 sh '''
@@ -63,10 +64,13 @@ pipeline {
                         --name "$APP_NAME" \
                         --restart unless-stopped \
                         -p "$HOST_PORT:$CONTAINER_PORT" \
-                        "$DOCKER_USERNAME_PLACEHOLDER/$APP_NAME:$BUILD_NUMBER"
+                        "$APP_NAME:$BUILD_NUMBER"
+
+                    docker ps
                 '''
             }
         }
+
     }
 
     post {
