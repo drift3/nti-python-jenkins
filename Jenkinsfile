@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -7,48 +8,23 @@ pipeline {
 
     environment {
         APP_NAME = 'hello-python-nti'
+        REPO_URL = 'https://github.com/drift3/nti-python-jenkins.git'
+        HOST_PORT = '5000'
         CONTAINER_PORT = '5000'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Configure Branch') {
-            steps {
-                script {
-                    switch (env.BRANCH_NAME) {
-                        case 'dev':
-                            env.HOST_PORT = '5001'
-                            break
-
-                        case 'stg':
-                            env.HOST_PORT = '5002'
-                            break
-
-                        case 'prod':
-                            env.HOST_PORT = '5003'
-                            break
-
-                        default:
-                            error("Unsupported branch: ${env.BRANCH_NAME}")
-                    }
-
-                    echo "Branch: ${env.BRANCH_NAME}"
-                    echo "Host Port: ${env.HOST_PORT}"
-                }
+                git branch: 'main',
+                    credentialsId: 'jenkins-token',
+                    url: "${REPO_URL}"
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build \
-                        -t "$APP_NAME-$BRANCH_NAME:$BUILD_NUMBER" .
-                '''
+                sh 'docker build -t "$APP_NAME:$BUILD_NUMBER" .'
             }
         }
 
@@ -65,16 +41,12 @@ pipeline {
                         set -eu
 
                         echo "$DOCKER_PASSWORD" |
-                            docker login \
-                                -u "$DOCKER_USERNAME" \
-                                --password-stdin
+                            docker login -u "$DOCKER_USERNAME" --password-stdin
 
-                        docker tag \
-                            "$APP_NAME-$BRANCH_NAME:$BUILD_NUMBER" \
-                            "$DOCKER_USERNAME/$APP_NAME:$BRANCH_NAME-$BUILD_NUMBER"
+                        docker tag "$APP_NAME:$BUILD_NUMBER" \
+                            "$DOCKER_USERNAME/$APP_NAME:$BUILD_NUMBER"
 
-                        docker push \
-                            "$DOCKER_USERNAME/$APP_NAME:$BRANCH_NAME-$BUILD_NUMBER"
+                        docker push "$DOCKER_USERNAME/$APP_NAME:$BUILD_NUMBER"
 
                         docker logout
                     '''
@@ -82,31 +54,31 @@ pipeline {
             }
         }
 
+        
         stage('Run Docker Container') {
             steps {
                 sh '''
-                    docker rm -f "$APP_NAME-$BRANCH_NAME" \
-                        2>/dev/null || true
+                    docker rm -f "$APP_NAME" 2>/dev/null || true
 
                     docker run -d \
-                        --name "$APP_NAME-$BRANCH_NAME" \
+                        --name "$APP_NAME" \
                         --restart unless-stopped \
                         -p "$HOST_PORT:$CONTAINER_PORT" \
-                        "$APP_NAME-$BRANCH_NAME:$BUILD_NUMBER"
+                        "$APP_NAME:$BUILD_NUMBER"
 
                     docker ps
                 '''
             }
         }
+
     }
 
     post {
         success {
-            echo 'Python multibranch pipeline completed successfully!'
+            echo 'Python pipeline completed successfully!'
         }
-
         failure {
-            echo 'Pipeline failed. Check Console Output.'
+            echo 'Python pipeline failed. Check Console Output.'
         }
     }
 }
